@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 app.get('/api/movebank-data', async (req, res) => {
   try {
     const axiosInstance = axios.create({
-      baseURL: 'https://www.movebank.org/movebank/service',
+      baseURL: 'https://www.movebank.org/movebank/service/direct-read?entity_type=study&i_have_download_access=true',
       auth: {
         username: process.env.MOVEBANK_USERNAME || '',
         password: process.env.MOVEBANK_PASSWORD || '',

@@ -1,29 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import {
-  Container,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
+import { Typography, CircularProgress, Alert } from '@mui/material';
 
-interface TagType {
-  description: string;
-  external_id: string;
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+interface StudyData {
   id: string;
-  is_location_sensor: boolean;
   name: string;
+  main_location_lat: string;
+  main_location_long: string;
 }
 
 const MovebankData: React.FC = () => {
-  const [data, setData] = useState<TagType[]>([]);
+  const [data, setData] = useState<StudyData[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -31,7 +21,7 @@ const MovebankData: React.FC = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get('/api/movebank-data');
-        console.log(response)
+        console.log(response.data);
         setData(response.data);
       } catch (err: any) {
         setError('Error fetching data');
@@ -40,62 +30,68 @@ const MovebankData: React.FC = () => {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, []);
 
   if (loading) {
     return (
-      <Container>
+      <div>
         <Typography variant="h4" align="center" gutterBottom>
-          Movebank Sensor Types
+          Loading...
         </Typography>
         <CircularProgress style={{ display: 'block', margin: '20px auto' }} />
-      </Container>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container>
-        <Typography variant="h4" align="center" gutterBottom>
-          Movebank Sensor Types
-        </Typography>
+      <div>
         <Alert severity="error">{error}</Alert>
-      </Container>
+      </div>
     );
   }
 
   return (
-    <Container>
-      <Typography variant="h4" align="center" gutterBottom>
-        Movebank Sensor Types
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table aria-label="sensor types table">
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>ID</strong></TableCell>
-              <TableCell><strong>Name</strong></TableCell>
-              <TableCell><strong>External ID</strong></TableCell>
-              <TableCell><strong>Description</strong></TableCell>
-              <TableCell><strong>Is Location Sensor</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((sensor) => (
-              <TableRow key={sensor.id}>
-                <TableCell>{sensor.id}</TableCell>
-                <TableCell>{sensor.name}</TableCell>
-                <TableCell>{sensor.external_id}</TableCell>
-                <TableCell>{sensor.description}</TableCell>
-                <TableCell>{sensor.is_location_sensor ? 'Yes' : 'No'}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Container>
+    <div style={{ padding: 0 }}>
+      <MapContainer
+        center={[0, 0]}
+        zoom={2}
+        style={{ height: '100vh', width: '100%' }}
+      >
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        />
+        {data.map((study) => {
+          const lat = parseFloat(study.main_location_lat);
+          const lng = parseFloat(study.main_location_long);
+
+          if (isNaN(lat) || isNaN(lng)) {
+            console.warn(`Invalid coordinates for study ID ${study.id}:`, study);
+            return null;
+          }
+
+          return (
+            <CircleMarker
+              key={study.id}
+              center={[lat, lng]}
+              radius={5}
+              fillColor="blue"
+              color="blue"
+              fillOpacity={0.7}
+            >
+              <Popup>
+                <Typography variant="subtitle1">
+                  <strong>{study.name}</strong>
+                </Typography>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </MapContainer>
+    </div>
   );
 };
 
