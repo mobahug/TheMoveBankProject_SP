@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Typography, CircularProgress, Alert } from "@mui/material";
+import { Typography, CircularProgress, Alert, Link } from "@mui/material";
 
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface StudyData {
@@ -12,8 +18,16 @@ interface StudyData {
   main_location_long: string;
 }
 
+interface EventData {
+  timestamp: string;
+  location_lat: string;
+  location_long: string;
+  individual_id: string;
+}
+
 const MovebankData: React.FC = () => {
   const [data, setData] = useState<StudyData[]>([]);
+  const [eventData, setEventData] = useState<EventData[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -21,7 +35,6 @@ const MovebankData: React.FC = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get("/api/movebank-data");
-        console.log(response.data);
         setData(response.data);
       } catch (err: any) {
         setError("Error fetching data");
@@ -33,6 +46,16 @@ const MovebankData: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const fetchAnimalPath = async (study_id: string) => {
+    try {
+      const response = await axios.get(`/api/movebank-data/${study_id}`);
+      setEventData(response.data);
+    } catch (err: any) {
+      setError("Error fetching animal path data");
+      console.error("Error:", err.message);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,13 +101,23 @@ const MovebankData: React.FC = () => {
             fillOpacity={0.7}
           >
             <Popup>
-              <Typography variant="subtitle1">
+              <Link onClick={() => fetchAnimalPath(study.id)}>
                 <strong>{study.name}</strong>
-              </Typography>
+              </Link>
             </Popup>
           </CircleMarker>
         );
       })}
+
+      {eventData.length > 0 && (
+        <Polyline
+          positions={eventData.map(event => [
+            parseFloat(event.location_lat),
+            parseFloat(event.location_long),
+          ])}
+          color="red"
+        />
+      )}
     </MapContainer>
   );
 };
