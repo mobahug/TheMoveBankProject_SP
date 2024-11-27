@@ -10,6 +10,7 @@ import {
   Polyline,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { getEventData, getStudies } from "./movebankService";
 
 interface StudyData {
   id: string;
@@ -34,8 +35,8 @@ const MovebankData: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("/api/movebank-data");
-        setData(response.data);
+        const studies = await getStudies();
+        setData(studies);
       } catch (err: any) {
         setError("Error fetching data");
         console.error("Error:", err.message);
@@ -49,8 +50,8 @@ const MovebankData: React.FC = () => {
 
   const fetchAnimalPath = async (study_id: string) => {
     try {
-      const response = await axios.get(`/api/movebank-data/${study_id}`);
-      setEventData(response.data);
+      const events = await getEventData(study_id);
+      setEventData(events);
     } catch (err: any) {
       setError("Error fetching animal path data");
       console.error("Error:", err.message);

@@ -1,8 +1,6 @@
 import express from "express";
-import axios from "axios";
 import dotenv from "dotenv";
-import crypto from "crypto";
-import csvtojson from "csvtojson";
+import { fetchMovebankData } from "./moveBankHelper";
 
 dotenv.config();
 
@@ -11,49 +9,24 @@ const PORT = process.env.PORT || 5000;
 
 app.get("/api/movebank-data", async (req, res) => {
   try {
-    const axiosInstance = axios.create({
-      baseURL: "https://www.movebank.org/movebank/service",
-      auth: {
-        username: process.env.MOVEBANK_USERNAME || "",
-        password: process.env.MOVEBANK_PASSWORD || "",
-      },
-      responseType: "text",
-    });
+    const studies = await fetchMovebankData(
+      "study" /* {
+      i_have_download_access: "true",
+    } */
+    );
 
-    let response = await axiosInstance.get("/direct-read", {
-      params: {
-        entity_type: "study",
-      },
-    });
-
-    if (response.data.includes("License Terms:")) {
-      const licenseTerms = response.data;
-      const md5sum = crypto
-        .createHash("md5")
-        .update(licenseTerms)
-        .digest("hex");
-
-      response = await axiosInstance.get("/direct-read", {
-        params: {
-          entity_type: "study",
-          "license-md5": md5sum,
-        },
-      });
-    }
-
-    const jsonData = await csvtojson().fromString(response.data);
-
-    const studies = jsonData.map(study => ({
+    const formattedStudies = studies.map(study => ({
       id: study.id,
       name: study.name,
       main_location_lat: study.main_location_lat,
       main_location_long: study.main_location_long,
+      license_type: study.license_type,
     }));
 
-    res.json(studies);
+    res.json(formattedStudies);
   } catch (error) {
-    console.error("Error fetching data from Movebank:", error);
-    res.status(500).json({ error: "Failed to fetch data from Movebank" });
+    console.error("Error fetching study data:", error);
+    res.status(500).json({ error: "Failed to fetch study data from Movebank" });
   }
 });
 
@@ -61,46 +34,16 @@ app.get("/api/movebank-data/:study_id", async (req, res) => {
   const { study_id } = req.params;
 
   try {
-    const axiosInstance = axios.create({
-      baseURL: "https://www.movebank.org/movebank/service",
-      auth: {
-        username: process.env.MOVEBANK_USERNAME || "",
-        password: process.env.MOVEBANK_PASSWORD || "",
-      },
-      responseType: "text",
+    const events = await fetchMovebankData("event", {
+      study_id: study_id,
+      attributes: "timestamp,location_long,location_lat,individual_id",
+      event_reduction_profile: "EURING_01", // only show a single animal track
     });
 
-    let response = await axiosInstance.get("/direct-read", {
-      params: {
-        entity_type: "event",
-        study_id: study_id,
-        attributes: "timestamp,location_long,location_lat,individual_id",
-      },
-    });
-
-    if (response.data.includes("License Terms:")) {
-      const licenseTerms = response.data;
-      const md5sum = crypto
-        .createHash("md5")
-        .update(licenseTerms)
-        .digest("hex");
-
-      response = await axiosInstance.get("/direct-read", {
-        params: {
-          entity_type: "event",
-          study_id: study_id,
-          attributes: "timestamp,location_long,location_lat,individual_id",
-          "license-md5": md5sum,
-        },
-      });
-    }
-
-    const jsonData = await csvtojson().fromString(response.data);
-
-    res.json(jsonData);
+    res.json(events);
   } catch (error) {
-    console.error("Error fetching data from Movebank:", error);
-    res.status(500).json({ error: "Failed to fetch data from Movebank" });
+    console.error("Error fetching event data:", error);
+    res.status(500).json({ error: "Failed to fetch event data from Movebank" });
   }
 });
 
