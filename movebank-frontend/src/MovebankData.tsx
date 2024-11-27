@@ -117,6 +117,7 @@ const MovebankData: React.FC = () => {
             parseFloat(event.location_long),
           ])}
           color="red"
+          weight={1}
         />
       )}
     </MapContainer>
